@@ -8,7 +8,7 @@ The input should be a group $$G$$ and a list $$C=\{C_1,\dots,C_k\}$$ of conjugac
 The Brauer group has even order, so if $$G$$ has odd order then there is no Brauer group.
 
 ## Step 1: Check validity of $$C$$
-Check that $$\bigcup_i C_i$$ generates $$G$$.  Moreover, check that this union is closed under invertible powers (for example, by checking that for $$t$$ coprime to the size of $$G$$ we have $$C_i^t=C_j$$ for some $$j$$).  In doing this, store the group of integers $$k\in (\mathbb{Z}/2|G|)^\time[2^\infty]$$ such that $$C_i^{k}=C_i$$.  Call that group $$N_i$$.
+Check that $$\bigcup_i C_i$$ generates $$G$$.  Moreover, check that this union is closed under invertible powers (for example, by checking that for $$t$$ coprime to the size of $$G$$ we have $$C_i^t=C_j$$ for some $$j$$).  In doing this, store the group of integers $$k\in (\mathbb{Z}/2|G|)^\times[2^\infty]$$ such that $$C_i^{k}=C_i$$.  Call that group $$N_i$$.
 
 ## Step 2: Enumerate all geometric central extensions
 Compute $$H^2(G,\mathbb{Z}/2\mathbb{Z})$$ as a group, and maintain the ability to map an element to a central extension.
@@ -29,7 +29,7 @@ For each basis element from 3.A, we now want an explicit marking.  This is compu
 For each $$C_i$$, and each generator for step 3 do the following.  Choose a $$\tilde{g}_i\in D_i$$$, and for each $$k\in N_i$$ store whether $$\tilde{g}_i^x$$ is conjugate to $$\tilde{g_i}$$.  Store this as the value of the residue at $$k$$.
 
 ## Step 5: Compute the residues of the algebraic Brauer group
-The algebraic Brauer group elements are represented by elements of $$\text{Hom}(\mathbb{Z}/2\#G\mathbb{Z}, \hat{G}[2])$$.  The residue of an element $$b$$ of this group, evaluated at an element $$k\in N_i$$, is $$b(k)(C_i)$$. Here $$b(k)$$ has a well defined output on $$C_i$$ since it factors through the abelianisation.  Store the values as in step 4.
+The algebraic Brauer group elements are represented by elements of $$\text{Hom}(\mathbb{Z}/2|G|\mathbb{Z}, \hat{G}[2])$$.  The residue of an element $$b$$ of this group, evaluated at an element $$k\in N_i$$, is $$b(k)(C_i)$$. Here $$b(k)$$ has a well defined output on $$C_i$$ since it factors through the abelianisation.  Store the values as in step 4.
 
 
 ## Step 6: Match up pairs of an algebraic and a geometric Brauer element who have the same residues.
