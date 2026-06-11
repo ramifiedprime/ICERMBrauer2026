@@ -34,7 +34,7 @@ For each basis element from 3.A, we now want an explicit marking.  This is compu
 For each $$C_i$$, and each generator for step 3 do the following.  Choose a $$\tilde{g}_i\in D_i$$$, and for each $$k\in N_i$$ store whether $$\tilde{g}_i^x$$ is conjugate to $$\tilde{g_i}$$.  Store this as the value of the residue at $$k$$.
 
 ### Step 5: Compute the residues of the algebraic Brauer group
-The algebraic Brauer group elements are represented by elements of $$\text{Hom}(\mathbb{Z}/2|G|\mathbb{Z}, \hat{G}[2])$$.  The residue of an element $$b$$ of this group, evaluated at an element $$k\in N_i$$, is $$b(k)(C_i)$$. Here $$b(k)$$ has a well defined output on $$C_i$$ since it factors through the abelianisation.  Store the values as in step 4.
+The algebraic Brauer group elements are represented by elements of $$\text{Hom}(\mathbb{Z}/2|G|\mathbb{Z}, \hat{G}[2])$$ modulo the image of $$2(\hat{G}[4])$$.  The residue of an element $$b$$ of this group, evaluated at an element $$k\in N_i$$, is $$b(k)(C_i)$$. Here $$b(k)$$ has a well defined output on $$C_i$$ since it factors through the abelianisation.  Store the values as in step 4.
 
 
 ### Step 6: Match up pairs of an algebraic and a geometric Brauer element who have the same residues.
