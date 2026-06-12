@@ -1,4 +1,4 @@
-load "ChatGPT_implementation.mg";
+load "main.mg";
 
 testgroups := [* *];
     G:=CyclicGroup(4);
@@ -15,13 +15,18 @@ Append(~testgroups, [*G,C*]);
 Append(~testgroups, [*G,C*]);
 
 
-procedure testsize(G,C)
-    R := PartiallyRamifiedBrauerPairs(G, C);
-    printf "Group: %o\nConjugacy Classes: %o\nSize of Brauer: %o\n\n", GroupName(G), C, #R`MatchingPairs;
-end procedure;
+// procedure testsize(G,C)
+//     R := PartiallyRamifiedBrauerPairs(G, C);
+//     printf "Group: %o\nConjugacy Classes: %o\nSize of Brauer: %o\n\n", GroupName(G), C, #R`MatchingPairs;
+// end procedure;
 
 for GC in testgroups do
-    testsize(GC[1],GC[2]);
+    R:=Btilde(GC[1],GC[2]);
+    // print G;
+    // print C;
+    print GroupName(GC[1]);
+    print R`Btilde;
+    print "";
 end for;
 
 
