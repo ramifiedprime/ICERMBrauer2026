@@ -13,7 +13,7 @@ function InitialiseDataStructure(G,C)
     M  := TrivialModule(G, F2);
     CMH2 := CohomologyModule(G, M);
     H2 := CohomologyGroup(CMH2, 2);
-    return rec< DataFormat | G := G, C := C, Cmax := C, M := M, CMH2 := CMH2, H2 := H2 >;
+    return rec< DataFormat | G := G, C := C, Cred := C, M := M, CMH2 := CMH2, H2 := H2 >;
 end function;
 
 function FindMarkedElements(R)
