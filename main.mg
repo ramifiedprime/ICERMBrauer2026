@@ -19,11 +19,14 @@
 // CMH2          is MAGMA's cohomology-module object for H^2(G, M).
 // H2Marked      is the set of marked elements in H2, which are all geometric markings.
 // H1            is H^1(Q(\zeta_n)/Q, \hat{G}[2])
-// gensH         is ???
+// gensH         is the list whose j-th entry contains generators for the
+//               image modulo squares of the stabiliser of C[j].
 // M1            is the matrix representing res_C: H1\to \oplus_{g\in C} H^1(Q(\zeta_n)/Q, \hat{<g>})
 // M2            is the matrix representing res_C: H2\to \oplus_{g\in C} H^1(Q(\zeta_n)/Q, \hat{<g>})
 /////////////////////////////////////////////////////////////////////
-BrauerDataFormat := recformat< G, n, C, CStabilisers, U, i, Umod2, pi2, Gabmod2 , F2, H2, CMH2, H2Marked, H1, gensH, M1, M2>;
+
+BrauerDataFormat := recformat< G, n, C, CStabilisers, U, i, Umod2, pi2,
+    gensH, Gabmod2, F2, H2, CMH2, H2Marked, H1, M1, M2, Btilde, Btildegens>;
 
 
 /////////////////////////////////////////////////////////////////////
@@ -40,13 +43,20 @@ function InitialiseBrauerDataStructure(G,C)
     for g in C do
         g_stab:=[];
         for x in U do
-            if IsConjugate(R`G, g^(ZZ!i(x)), g) then Append(~g_stab,x); end if;
+            if IsConjugate(G,g^(ZZ!i(x)),g) then Append(~g_stab,x); end if;
         end for;
-        Append(~CStabilisers, sub<U|g_stab>);
+        Append(~CStabilisers,sub<U|g_stab>);
     end for;
-    Hismod2 := [pi2(H) : H in CStabilisers];
-    gensH := &cat[[H.i : i in [1..Ngens(H)]] : H in Hismod2];
-    return rec< BrauerDataFormat | G := G, C := C, CStabilisers:=CStabilisers, gensH:=gensH, n := n, U:=U, Umod2:=Umod2, pi2:=pi2>;
+
+    gensH:=[];
+    for H in CStabilisers do
+        Hmod2:=sub<Umod2|[pi2(h):h in Generators(H)]>;
+        Append(~gensH,[Umod2!Hmod2.i:i in [1..Ngens(Hmod2)]]);
+    end for;
+
+    return rec< BrauerDataFormat | G := G, C := C,
+        CStabilisers:=CStabilisers, gensH:=gensH, n := n,
+        U:=U, i:=i, Umod2:=Umod2, pi2:=pi2>;
 end function;
 
 
@@ -56,43 +66,45 @@ end function;
 
 
 /////////////////////////////////////////////////////////////////////
-// Given an element beta of R`H2, tests whether the element is 
+// Given an element beta of R`H2, tests whether the element is
 // geometrically unramified.
-function IsGeometricallyMarked(beta, R)
-    GbetaFP, phibetaFP, psibetaFP := Extension(R`CMH2, beta);
-    Gbeta, isoToPerm := PermutationGroup(GbetaFP);
-    phibeta := hom< Gbeta -> R`G | [ phibetaFP((Gbeta.i) @@ isoToPerm) : i in [1..Ngens(Gbeta)] ]>;
-    success:=true;
+function IsGeometricallyMarked(beta,R)
+    GbetaFP,phibetaFP,psibetaFP:=Extension(R`CMH2,beta);
+    Gbeta,isoToPerm:=PermutationGroup(GbetaFP);
+    phibeta:=hom<Gbeta->R`G|
+        [phibetaFP(Gbeta.i@@isoToPerm):i in [1..Ngens(Gbeta)]]>;
+
     for g in R`C do // here is where we construct the residue map at g
-        _,gtilde:=HasPreimage(phibeta,g);
+        success,gtilde:=HasPreimage(g,phibeta);
+        assert success;
         ZGg:=Centraliser(R`G,g);
         for h in Generators(ZGg) do // this is what we feed the residue map
-            _,htilde:=HasPreimage(phibeta,h);
-            if (gtilde, htilde) ne Id(Gbeta) then
-                success:=false;
-                break;
+            success,htilde:=HasPreimage(h,phibeta);
+            assert success;
+            if (gtilde,htilde) ne Gbeta!1 then
+                return false;
             end if;
         end for;
-        if not success then break; end if;
     end for;
-    return success;
+    return true;
 end function;
+
 
 /////////////////////////////////////////////////////////////////////
 // Assuming that R has already had computed H^2(G,C_2),
 // Computes the subset that are marked.
 procedure GetMarkedGeometricElements(~R)
-    F2 := GF(2);
-    R`F2  := TrivialModule(R`G, F2);
-    R`CMH2 := CohomologyModule(R`G, R`F2);
-    R`H2 := CohomologyGroup(R`CMH2, 2);
+    F2:=GF(2);
+    R`F2:=TrivialModule(R`G,F2);
+    R`CMH2:=CohomologyModule(R`G,R`F2);
+    R`H2:=CohomologyGroup(R`CMH2,2);
     winners:=[];
-    for beta in R`H2 do        
+    for beta in R`H2 do
         if IsGeometricallyMarked(beta,R) then
             Append(~winners,beta);
         end if;
     end for;
-    R`H2Marked:=sub< R`H2 | winners>;
+    R`H2Marked:=sub<R`H2|winners>;
 end procedure;
 
 
@@ -106,38 +118,77 @@ procedure GetGeometricPart(~R)
 // returns the geometric Brauer residue map as a matrix over GF(2). Its action on rows represents
 // the map from H^2(G, Z/2) to the direct sum of Hom(H, Z/2) for H in His.}
     GetMarkedGeometricElements(~R);
-    H2basis := [R`H2.i : i in [1..Dimension(R`H2Marked)]];
-    vals := [];
+
+    H2basis:=[R`H2!x:x in Basis(R`H2Marked)];
+    Ncols:=&+[#R`gensH[j]:j in [1..#R`C]];
+    vals:=[];
+
     for chi in H2basis do
         // for each basis element of H^2(G,Z/2), first produce the corresponding central extension.
-        extn, pi, iota := Extension(R`CMH2, chi);
-        // if the lift of an element to the central extension, and a power of it, still remain conjugate, we record 0 and otherwise 1
-        val := &cat[[IsConjugate(extn, g, g^(R`i(x @@ R`pi2))) select 1 else 0 : x in R`gensH] where g is gi@@pi : gi in R`C];
-        Append(~vals, val);
+        extnFP,piFP,iotaFP:=Extension(R`CMH2,chi);
+
+        extn,isoToPerm:=PermutationGroup(extnFP);
+        pi:=hom<extn->R`G|
+            [piFP(extn.i@@isoToPerm):i in [1..Ngens(extn)]]>;
+
+        val:=[];
+        for j in [1..#R`C] do
+            gi:=R`C[j];
+            success,g:=HasPreimage(gi,pi);
+            assert success;
+
+            for x in R`gensH[j] do
+                u:=Integers()!R`i(x@@R`pi2);
+
+                Append(~val,IsConjugate(extn,g,g^u) select 0 else 1);
+            end for;
+        end for;
+        Append(~vals,val);
     end for;
-    M2 := Matrix(GF(2), #vals, #vals[1], vals);
+
+    if #vals eq 0 then
+        M2:=ZeroMatrix(GF(2),0,Ncols);
+    else
+        M2:=Matrix(GF(2),#vals,Ncols,&cat vals);
+    end if;
     R`M2:=M2;
 end procedure;
 
 
-
 procedure GetAlgebraicPart(~R)
-    Gabmod2, piabmod2 := ElementaryAbelianQuotient(R`G,2);
-    A, phi := Dual(Gabmod2); // A is the dual of G^ab/2*G^ab, so A is Gdual[2]. phi is the pairing G^ab/2*G^ab x A --> Z/2
-    H1, psi := Hom(R`Umod2,A); // this is the domain
-    vals := [];
-    for i := 1 to Ngens(H1) do
-        val := &cat[[phi(piabmod2(gi),psi(H1.i)(x)) : x in R`gensH] : gi in R`C];
+    Gabmod2,piabmod2:=ElementaryAbelianQuotient(R`G,2);
+    A,phi:=Dual(Gabmod2); // A is the dual of G^ab/2*G^ab, so A is Gdual[2]. phi is the pairing G^ab/2*G^ab x A --> Z/2
+    H1,psi:=Hom(R`Umod2,A); // this is the domain
+    Ncols:=&+[#R`gensH[j]:j in [1..#R`C]];
+    vals:=[];
+
+    for i:=1 to Ngens(H1) do
+        val:=[];
+
+        for j in [1..#R`C] do
+            gi:=R`C[j];
+
+            for x in R`gensH[j] do
+                Append(~val,phi(piabmod2(gi),psi(H1.i)(x)));
+            end for;
+        end for;
         Append(~vals,val);
     end for;
-    M1 := Matrix(GF(2), #vals, #vals[1], vals);
+
+    if #vals eq 0 then
+        M1:=ZeroMatrix(GF(2),0,Ncols);
+    else
+        M1:=Matrix(GF(2),#vals,Ncols,&cat vals);
+    end if;
+
+    R`Gabmod2:=Gabmod2;
     R`H1:=H1;
     R`M1:=M1;
 end procedure;
 
 
-
-procedure Btilde(G,C)
+/////////////////////////////////////////////////////////////////////
+function Btilde(G,C)
 // {Given
 // - a group G
 // - a list gis of representatives of conjugacy classes of G
@@ -151,27 +202,44 @@ procedure Btilde(G,C)
     R:=InitialiseBrauerDataStructure(G,C);
     GetGeometricPart(~R);
     GetAlgebraicPart(~R);
-    M := VerticalJoin(R`M1,R`M2);
-    K := Kernel(M);
-    d1 := NumberOfRows(R`M1);
-    d2 := NumberOfRows(R`M2);
-    Btilde_gens:=[<R`H1!Eltseq(v)[1..d1], R`H2!Eltseq(v)[d1+1..d2]> : v in Basis(K)];
-    total_space:=Product(R`H1, R`H2);
-    Btilde_group:=sub<total_space|Btilde_gens>;
-end procedure;
+    M:=VerticalJoin(R`M1,R`M2);
+    K:=Kernel(M);
+    d1:=NumberOfRows(R`M1);
+    d2:=NumberOfRows(R`M2);
+
+    // FIX: the last d2 coordinates refer to the chosen basis of H2Marked
+    H2basis:=[R`H2!x:x in Basis(R`H2Marked)];
+    Btilde_gens:=[];
+
+    for v in Basis(K) do
+        a:=R`H1!0;
+        for i in [1..d1] do
+            if v[i] ne 0 then a+:=R`H1.i; end if;
+        end for;
+
+        // FIX: reconstruct the H2 element from the basis of H2Marked
+        b:=R`H2!0;
+        for i in [1..d2] do
+            if v[d1+i] ne 0 then b+:=H2basis[i]; end if;
+        end for;
+
+        Append(~Btilde_gens,<a,b>);
+    end for;
+
+    // FIX: H1 and H2 do not have a suitable common Product parent.
+    // Return an abstract elementary abelian group and the corresponding pairs.
+    Btilde_group:=AbelianGroup([2:i in [1..Dimension(K)]]);
+    R`Btilde:=Btilde_group;
+    R`Btildegens:=Btilde_gens;
+    return R;
+end function;
 
 
-
-G:=Sym(4);
-C:=[G!(1,2)];
-Btilde(G,C);
+// G:=Sym(4);
+// C:=[G!(1,2)];
 
 
+// G:=CyclicGroup(4);
+// C:=[G.1,G.1^3];
 
-
-
-
-
-
-
-
+// R:=Btilde(G,C);
